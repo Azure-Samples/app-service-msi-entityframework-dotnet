@@ -1,0 +1,237 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+        "contentVersion": "1.0.0.0",
+            "parameters": {
+        "webSiteName": {
+            "type": "string",
+                "maxLength": 15,
+                    "metadata": {
+                "description": "Name of the Web App."
+            }
+        },
+        "skuName": {
+            "type": "string",
+                "defaultValue": "F1",
+                    "allowedValues": [
+                        "F1",
+                        "D1",
+                        "B1",
+                        "B2",
+                        "B3",
+                        "S1",
+                        "S2",
+                        "S3",
+                        "P1",
+                        "P2",
+                        "P3",
+                        "P4"
+                    ],
+                        "metadata": {
+                "description": "Describes plan's pricing tier and instance size. Check details at https://azure.microsoft.com/en-us/pricing/details/app-service/"
+            }
+        },
+        "sqlServerName": {
+            "type": "string",
+                "metadata": {
+                "description": "Name of the SQL server"
+            }
+        },
+        "sqlDatabaseName": {
+            "type": "string",
+                "metadata": {
+                "description": "Name of the SQL database"
+            }
+        },
+        "sqlAdminUsername": {
+            "type": "string",
+                "metadata": {
+                "description": "Username of the SQL admin"
+            }
+        },
+        "sqlAdminPassword": {
+            "type": "securestring",
+                "metadata": {
+                "description": "Password of the SQL admin (TODO need to make complex!)"
+            }
+        },
+
+
+
+
+        "collation": {
+            "type": "string",
+                "defaultValue": "SQL_Latin1_General_CP1_CI_AS",
+                    "metadata": {
+                "description": "The database collation for governing the proper use of characters."
+            }
+        },
+        "edition": {
+            "type": "string",
+                "defaultValue": "Basic",
+                    "allowedValues": [
+                        "Basic",
+                        "Standard",
+                        "Premium"
+                    ],
+                        "metadata": {
+                "description": "The type of database to create."
+            }
+        },
+        "maxSizeBytes": {
+            "type": "string",
+                "defaultValue": "1073741824",
+                    "metadata": {
+                "description": "The maximum size, in bytes, for the database"
+            }
+        },
+        "requestedServiceObjectiveName": {
+            "type": "string",
+                "defaultValue": "Basic",
+                    "allowedValues": [
+                        "Basic",
+                        "S0",
+                        "S1",
+                        "S2",
+                        "P1",
+                        "P2",
+                        "P3"
+                    ],
+                        "metadata": {
+                "description": "Describes the performance level for Edition"
+            }
+        },
+        "cacheSKUName": {
+            "type": "string",
+                "allowedValues": [
+                    "Basic",
+                    "Standard"
+                ],
+                    "defaultValue": "Basic",
+                        "metadata": {
+                "description": "The pricing tier of the new Azure Redis Cache."
+            }
+        },
+        "cacheSKUFamily": {
+            "type": "string",
+                "allowedValues": [
+                    "C"
+                ],
+                    "defaultValue": "C",
+                        "metadata": {
+                "description": "The family for the sku."
+            }
+        },
+        "cacheSKUCapacity": {
+            "type": "int",
+                "allowedValues": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6
+                ],
+                    "defaultValue": 0,
+                        "metadata": {
+                "description": "The size of the new Azure Redis Cache instance. "
+            }
+        }
+
+
+
+
+
+
+
+    },
+    "variables": {
+        "hostingPlanName": "[concat('hostingplan', uniqueString(resourceGroup().id))]",
+            "identityResourceId" : "[concat(resourceId('Microsoft.Web/sites', parameters('webSiteName')),'/providers/Microsoft.ManagedIdentity/Identities/default')]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2016-03-01",
+            "name": "[variables('hostingPlanName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "HostingPlan"
+            },
+            "sku": {
+                "name": "[parameters('skuName')]",
+                "capacity": 1
+            },
+            "properties": {
+                "name": "[variables('hostingPlanName')]"
+            }
+        },
+        {
+            "apiVersion": "2016-03-01",
+            "name": "[parameters('webSiteName')]",
+            "type": "Microsoft.Web/sites",
+            "location": "[resourceGroup().location]",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "dependsOn": [
+                "[variables('hostingPlanName')]"
+            ],
+            "tags": {
+                "[concat('hidden-related:', resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName')))]": "empty",
+                "displayName": "Website"
+            },
+            "properties": {
+                "name": "[parameters('webSiteName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+            }
+        },
+        {
+            "name": "[parameters('sqlServerName')]",
+            "type": "Microsoft.Sql/servers",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "SqlServer"
+            },
+            "apiVersion": "2014-04-01-preview",
+            "properties": {
+                "administratorLogin": "[parameters('sqlAdminUsername')]",
+                "administratorLoginPassword": "[parameters('sqlAdminPassword')]",
+                "version": "12.0"
+            },
+            "resources": [
+                {
+                    "name": "[parameters('sqlDatabaseName')]",
+                    "type": "databases",
+                    "location": "[resourceGroup().location]",
+                    "tags": {
+                        "displayName": "Database"
+                    },
+                    "apiVersion": "2014-04-01-preview",
+                    "dependsOn": [
+                        "[concat('Microsoft.Sql/servers/', parameters('sqlServerName'))]"
+                    ],
+                    "properties": {
+                        "edition": "[parameters('edition')]",
+                        "collation": "[parameters('collation')]",
+                        "maxSizeBytes": "[parameters('maxSizeBytes')]",
+                        "requestedServiceObjectiveName": "[parameters('requestedServiceObjectiveName')]"
+                    }
+                },
+                {
+                    "type": "firewallrules",
+                    "apiVersion": "2014-04-01-preview",
+                    "dependsOn": [
+                        "[concat('Microsoft.Sql/servers/', parameters('sqlServerName'))]"
+                    ],
+                    "location": "[resourceGroup().location]",
+                    "name": "AllowAllWindowsAzureIps",
+                    "properties": {
+                        "endIpAddress": "0.0.0.0",
+                        "startIpAddress": "0.0.0.0"
+                    }
+                }
+            ]
+        }
+    ]
+}
