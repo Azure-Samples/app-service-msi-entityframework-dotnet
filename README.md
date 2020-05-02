@@ -11,7 +11,7 @@ For AAD-based authentication to Azure SQL Database, developers who wanted their 
 
 ```csharp    
 SqlConnection connection = new SqlConnection(connectionString); 
-connection.AccessToken = await (new AzureServiceTokenProvider()).GetAccessTokenAsync("https://database.windows.net/") 
+connection.AccessToken = await (new AzureServiceTokenProvider()).GetAccessTokenAsync("https://database.windows.net/"); 
 connection.Open(); 
 ```
 
