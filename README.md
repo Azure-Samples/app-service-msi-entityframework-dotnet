@@ -11,7 +11,7 @@ For AAD-based authentication to Azure SQL Database, developers who wanted their 
 
 ```csharp    
 SqlConnection connection = new SqlConnection(connectionString); 
-connection.AccessToken = await (new AzureServiceTokenProvider()).GetAccessTokenAsync("https://database.windows.net/") 
+connection.AccessToken = await (new AzureServiceTokenProvider()).GetAccessTokenAsync("https://database.windows.net/",<Tenant-ID>); 
 connection.Open(); 
 ```
 
@@ -113,6 +113,8 @@ Using SQL Server Management Studio, authenticate using your developer account to
 
 ```sql
 CREATE USER [<App Service Name>] FROM EXTERNAL PROVIDER
+CREATE USER [<App Service Name>/slots/<slotName>] FROM EXTERNAL PROVIDER -- For Web App in slots
+
 ALTER ROLE db_datareader ADD MEMBER [[<App Service Name>] -- gives permission to read to database
 ALTER ROLE db_datawriter ADD MEMBER [[<App Service Name>] -- gives permission to write to database
 ```
